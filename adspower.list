@@ -1,6 +1,6 @@
-DOMAIN-SUFFIX,ip2location.com
+DOMAIN-KEYWORD,ip2location
 DOMAIN-KEYWORD,adspower
-DOMAIN-SUFFIX,myclientip.com
-DOMAIN-SUFFIX,whoer.net
-DOMAIN-SUFFIX,browserscan.net
-DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-KEYWORD,myclientip
+DOMAIN-KEYWORD,whoer.net
+DOMAIN-KEYWORD,browserscan
+DOMAIN-KEYWORD,browserleaks
