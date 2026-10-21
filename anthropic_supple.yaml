@@ -1,29 +1,57 @@
-payload:
-  # 核心域名
-  - DOMAIN-SUFFIX,anthropic.com
-  - DOMAIN-SUFFIX,claude.ai
-  - DOMAIN-SUFFIX,claude.com
-  - DOMAIN-SUFFIX,clau.de
-  - DOMAIN-SUFFIX,claudemcpclient.com
-  - DOMAIN-SUFFIX,claudemcpcontent.com
-  - DOMAIN-SUFFIX,claudeusercontent.com
-  # CDN 和静态资源
-  - DOMAIN,servd-anthropic-website.b-cdn.net
-  - DOMAIN,anthropic.com.cdn.cloudflare.net
-  # 认证 / 内容
-  - DOMAIN,anthropic.auth0.com
-  - DOMAIN,anthropic-com.ghost.io
-  # 监控和遥测
-  - DOMAIN-SUFFIX,sentry.io
-  - DOMAIN-SUFFIX,statsigapi.net
-  - DOMAIN,browser-intake-us5-datadoghq.com
-  - DOMAIN-KEYWORD,datadog
-  - DOMAIN-KEYWORD,sift
-  # 客服 / 第三方 widget
-  - DOMAIN-SUFFIX,intercom.io
-  - DOMAIN-SUFFIX,intercomcdn.com
-  - DOMAIN,cdn.usefathom.com
-  # IP 段 / ASN 兜底
-  - IP-CIDR,160.79.104.0/21,no-resolve
-  - IP-CIDR6,2607:6bc0::/32,no-resolve
-  - IP-ASN,399358,no-resolve
+{
+  "routing": {
+    "rules": [
+      {
+        "domain": [
+          // 匹配这些域名本身及其子域名。
+          "domain:anthropic.com",
+          "domain:claude.ai",
+          "domain:claude.com",
+          "domain:clau.de",
+          "domain:claudemcpclient.com",
+          "domain:claudemcpcontent.com",
+          "domain:claudeusercontent.com",
+          // 以下为完整域名匹配。
+          "full:servd-anthropic-website.b-cdn.net",
+          "full:anthropic.com.cdn.cloudflare.net",
+          "full:anthropic.auth0.com",
+          "full:anthropic-com.ghost.io",
+          "domain:sentry.io",
+          "domain:statsigapi.net",
+          "full:browser-intake-us5-datadoghq.com",
+          // 保留原文件的关键词规则；其范围可能包含其他服务的域名。
+          "keyword:datadog",
+          "keyword:sift",
+          "keyword:sentry",
+          "domain:intercom.io",
+          "domain:intercomcdn.com",
+          "full:cdn.usefathom.com",
+          // 保留原文件的数据库引用，不代表已展开或验证其中内容。
+          "geosite:anthropic",
+          "geosite:category-ntp"
+		      // 一些检测网站
+		      "domain:scamalytics.com",
+		      "domain:ipkk.com",
+		      "domain:iplark.com",
+		      "domain:ip.net.coffee",
+		      "domain:ippure.com",
+		      "domain:fuck-claude.vercel.app",
+		      "domain:claude-tester-six.vercel.app"
+        ],
+        "outboundTag": "proxy"
+      },
+      {
+        // 避免“域名且 IP 同时匹配”。
+        "ip": [
+          "160.79.104.0/21",
+          "2607:6bc0::/32"
+        ],
+        "outboundTag": "proxy"
+      },
+	  {
+		"network": "udp",
+		"outboundTag": "proxy"
+	  }
+    ]
+  }
+}
