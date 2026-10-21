@@ -1,3 +1,4 @@
+# 核心域名
 DOMAIN-SUFFIX,anthropic.com
 DOMAIN-SUFFIX,claude.ai
 DOMAIN-SUFFIX,claude.com
@@ -20,3 +21,12 @@ DOMAIN,cdn.usefathom.com
 IP-CIDR,160.79.104.0/21,no-resolve
 IP-CIDR6,2607:6bc0::/32,no-resolve
 IP-ASN,399358,no-resolve
+DOMAIN-SUFFIX,ipleak.net
+DOMAIN-SUFFIX,browserleaks.com
+DOMAIN-SUFFIX,scamalytics.com
+DOMAIN-SUFFIX,ipkk.com
+DOMAIN-SUFFIX,iplark.com
+DOMAIN-SUFFIX,ip.net.coffee
+DOMAIN-SUFFIX,ippure.com
+DOMAIN-SUFFIX,fuck-claude.vercel.app
+DOMAIN-SUFFIX,claude-tester-six.vercel.app
