@@ -30,13 +30,15 @@
           "geosite:anthropic",
           "geosite:category-ntp"
 		      // 一些检测网站
-		      "domain:scamalytics.com",
-		      "domain:ipkk.com",
-		      "domain:iplark.com",
-		      "domain:ip.net.coffee",
-		      "domain:ippure.com",
-		      "domain:fuck-claude.vercel.app",
-		      "domain:claude-tester-six.vercel.app"
+		  "domain:ipleak.net",
+		  "domain:browserleaks.com",
+		  "domain:scamalytics.com",
+		  "domain:ipkk.com",
+		  "domain:iplark.com",
+		  "domain:ip.net.coffee",
+	      "domain:ippure.com",
+		  "domain:fuck-claude.vercel.app",
+	      "domain:claude-tester-six.vercel.app"
         ],
         "outboundTag": "proxy"
       },
