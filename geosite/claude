@@ -1,8 +1,9 @@
 # Claude / Anthropic 分流
-# 来源：https://ip.net.coffee/claude/site.html “类型前缀文本”（2026-11-25 抓取）
+# 自动生成区：每天由 .github/workflows/update-claude-rules.yml 从
+# https://ip.net.coffee/claude/site.html 的“类型前缀文本”同步。
 # 映射：DOMAIN-SUFFIX -> domain:，DOMAIN -> full:，DOMAIN-KEYWORD -> keyword:
-
-# 核心域名
+# BEGIN net.coffee（自动生成，勿手改）
+# 核心域名（DOMAIN-SUFFIX 已覆盖所有 *.anthropic.com 子域名）
 domain:anthropic.com
 domain:claude.ai
 domain:claude.com
@@ -10,28 +11,28 @@ domain:clau.de
 domain:claudemcpclient.com
 domain:claudemcpcontent.com
 domain:claudeusercontent.com
-
 # CDN 和静态资源
 full:servd-anthropic-website.b-cdn.net
 full:anthropic.com.cdn.cloudflare.net
-
 # 认证 / 内容
 full:anthropic.auth0.com
 full:anthropic-com.ghost.io
-
-# 监控和遥测（关键词会顺带匹配其他使用这些服务的网站，用于保持出口一致）
+# 监控和遥测
 domain:sentry.io
 domain:statsigapi.net
 full:browser-intake-us5-datadoghq.com
 keyword:datadog
 keyword:sift
-# 页面“兜底规则”一节的 keyword:sentry（覆盖 sentry-cdn.com 等）
-keyword:sentry
-
 # 客服 / 第三方 widget
 domain:intercom.io
 domain:intercomcdn.com
 full:cdn.usefathom.com
+# END net.coffee
+
+# —— 以下为手工维护 ——
+
+# 页面“兜底规则”一节的 keyword:sentry（覆盖 sentry-cdn.com 等）
+keyword:sentry
 
 # 补充：Loyalsoldier geosite:anthropic（202611242204）中页面未列出的域名
 domain:ant.dev

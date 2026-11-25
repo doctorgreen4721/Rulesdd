@@ -1,0 +1,93 @@
+name: Update Claude rules
+
+on:
+  schedule:
+    # GitHub 的 cron 只用 UTC，不随夏令时变化：
+    # 17:00 UTC = 纽约 12:00（EST，冬季）/ 13:00（EDT，夏令时）。
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+    inputs:
+      verify:
+        description: 即使规则未变化也下载 Xray 运行验证
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-claude-rules
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync rules from Net.Coffee
+        run: python tools/update_from_netcoffee.py
+
+      - name: Build geodata
+        run: python tools/build_geodata.py
+
+      - name: Detect changes
+        id: diff
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "规则未变化。"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --stat
+          fi
+
+      - name: Download Xray-core (official release, SHA-256 checked)
+        if: steps.diff.outputs.changed == 'true' || inputs.verify
+        run: |
+          base=https://github.com/XTLS/Xray-core/releases/latest/download
+          curl -fsSL -o xray.zip "$base/Xray-linux-64.zip"
+          curl -fsSL -o xray.zip.dgst "$base/Xray-linux-64.zip.dgst"
+          expected=$(awk -F '= ' '/^SHA2-256=/ {print $2}' xray.zip.dgst)
+          actual=$(sha256sum xray.zip | awk '{print $1}')
+          test -n "$expected" && test "$expected" = "$actual"
+          mkdir -p "$RUNNER_TEMP/xray"
+          unzip -q xray.zip xray -d "$RUNNER_TEMP/xray"
+          rm -f xray.zip xray.zip.dgst
+          "$RUNNER_TEMP/xray/xray" version | head -1
+
+      - name: Verify with Xray
+        if: steps.diff.outputs.changed == 'true' || inputs.verify
+        run: python tools/verify_with_xray.py "$RUNNER_TEMP/xray/xray"
+
+      - name: Commit rule update
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update Claude rules from Net.Coffee ($(date -u +%Y-%m-%d))"
+          git push
+
+      - name: Keep the schedule alive
+        # 公开仓库 60 天无提交时 GitHub 会停用定时任务；超过 50 天无提交就写一次运行记录。
+        if: steps.diff.outputs.changed == 'false'
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if [ $(( (now - last) / 86400 )) -ge 50 ]; then
+            mkdir -p status
+            date -u +"%Y-%m-%dT%H:%M:%SZ 规则检查正常，无变化" > status/last-check.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add status/last-check.txt
+            git commit -m "Keepalive: rules unchanged ($(date -u +%Y-%m-%d))"
+            git push
+          fi

@@ -23,19 +23,37 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
-# (目标, 期望是否被规则命中)
-CASES = [
-    ("claude.ai", True), ("api.anthropic.com", True), ("console.anthropic.com", True),
-    ("browser-intake-us5-datadoghq.com", True), ("foo.datadoghq.eu", True),
-    ("js.sentry-cdn.com", True), ("widget.intercom.io", True), ("claude.app", True),
-    ("anthropic.com.cdn.cloudflare.net", True), ("cdn.usefathom.com", True),
-    ("maps.googleapis.com", True), ("inquiry.withpersona.com", True), ("ipleak.net", True),
-    ("x.anthropic.com.cdn.cloudflare.net", False), ("usefathom.com", False),
-    ("claude.example.org", False), ("example.org", False), ("www.googleapis.com", False),
-    ("160.79.104.10", True), ("160.79.111.255", True), ("160.79.112.1", False),
-    ("2607:6bc0::1", True), ("2607:6bc1::1", False), ("8.8.8.8", False),
-]
+# 必须命中的核心目标，以及与规则无关、必须不命中的目标。
+MUST_HIT = ["claude.ai", "api.anthropic.com"]
+MUST_MISS = ["example.org", "www.example.com", "1.1.1.1", "2001:4860:4860::8888"]
 
+
+def rule_lines(path: Path) -> list[str]:
+    return [line.split("#", 1)[0].strip() for line in path.read_text(encoding="utf-8").splitlines()
+            if line.split("#", 1)[0].strip()]
+
+
+def build_cases() -> list[tuple[str, bool]]:
+    """由源文件推出用例：每条规则至少一个应命中的目标，再加固定的必中 / 必不中目标。"""
+    cases: list[tuple[str, bool]] = [(target, True) for target in MUST_HIT]
+    for path in sorted((ROOT / "geosite").iterdir()):
+        for line in rule_lines(path):
+            kind, sep, value = line.partition(":")
+            if not sep:
+                kind, value = "domain", line
+            if kind == "domain":
+                cases += [(value, True), (f"probe.{value}", True)]
+            elif kind == "full":
+                cases.append((value, True))
+            elif kind == "keyword":
+                cases.append((f"x-{value}-probe.net", True))
+    for path in sorted((ROOT / "geoip").iterdir()):
+        for line in rule_lines(path):
+            network = ipaddress.ip_network(line, strict=False)
+            first = network.network_address + (1 if network.num_addresses > 1 else 0)
+            cases += [(str(first), True), (str(network.broadcast_address), True)]
+    cases += [(target, False) for target in MUST_MISS]
+    return list(dict.fromkeys(cases))
 
 def free_port() -> int:
     with socket.socket() as sock:
@@ -115,10 +133,10 @@ def main() -> int:
         for name in ("geosite-rulesdd.dat", "geoip-rulesdd.dat"):
             shutil.copy2(DIST / name, work / name)
         socks, echo = free_port(), free_port()
-        domain_tags = ["claude", "claude-kyc", "ip-check"]
+        domain_tags = sorted(path.name for path in (ROOT / "geosite").iterdir())
         rules = [
             {"domain": [f"ext:geosite-rulesdd.dat:{tag}" for tag in domain_tags], "outboundTag": "hit"},
-            {"ip": ["ext:geoip-rulesdd.dat:claude"], "outboundTag": "hit"},
+            {"ip": [f"ext:geoip-rulesdd.dat:{path.name}" for path in sorted((ROOT / "geoip").iterdir())], "outboundTag": "hit"},
         ]
         config = work / "config.json"
         write_config(config, rules + [{"domain": ["ext:geosite-rulesdd.dat:not-a-tag"], "outboundTag": "hit"}],
@@ -146,7 +164,7 @@ def main() -> int:
             if process.poll() is not None:
                 print("Xray 未能启动：", process.stdout.read().decode("utf-8", "replace")[-400:])
                 return 1
-            for target, expect_hit in CASES:
+            for target, expect_hit in build_cases():
                 hit = not through_socks(socks, target)
                 ok = hit == expect_hit
                 failures += not ok

@@ -62,8 +62,23 @@ python tools/inspect_geodata.py dist/geosite-rulesdd.dat claude
 python tools/verify_with_xray.py /path/to/xray      # 用真实核心验证加载与路由命中
 ```
 
-`verify_with_xray.py` 只在 127.0.0.1 上启动临时核心：命中规则的连接进入 blackhole，未命中的连接被重定向到本机回显服务，不访问外网。2026-11-25 用 Xray 26.11.9 验证 24 个用例全部符合预期。
+`verify_with_xray.py` 只在 127.0.0.1 上启动临时核心：命中规则的连接进入 blackhole，未命中的连接被重定向到本机回显服务，不访问外网。用例由源文件推出（每条规则至少一个应命中的目标），另加固定的必中 / 必不中目标。
+
+## 每日自动更新
+
+`.github/workflows/update-claude-rules.yml` 每天 17:00 UTC 运行（纽约 12:00 EST；夏令时期间为 13:00 EDT），也可在 Actions 页面手动运行：
+
+1. `tools/update_from_netcoffee.py` 抓取 [Net.Coffee 页面](https://ip.net.coffee/claude/site.html) 的“类型前缀文本”规则块，重写：
+   - `geosite/claude`、`geoip/claude` 中 `BEGIN net.coffee` / `END net.coffee` 之间的自动生成区（标记之外的手工规则保留）；
+   - `anthropic_supple.lsr`：页面规则原样 + 由 `geosite/ip-check` 生成的“检测网站”一节；
+   - `IP-ASN` 按 RIPEstat 当前宣告的前缀展开，只补入未被页面 CIDR 覆盖的部分。
+2. 重新生成 `dist/*.dat`。
+3. 只有内容变化时才下载最新官方 Xray（核对 `.dgst` 中的 SHA-256）运行 `verify_with_xray.py`，通过后提交。
+4. 页面改版导致找不到规则块、规则少于 10 条或缺少核心域名时，任务失败且不提交，GitHub 会发邮件通知。
+5. 超过 50 天没有提交时写入 `status/last-check.txt`，避免公开仓库 60 天无活动后定时任务被停用。
+
+检测网站请改 `geosite/ip-check`，手工补充的 Claude 域名写在 `geosite/claude` 的 `END net.coffee` 之后；不要编辑自动生成区和 `anthropic_supple.lsr`，下次同步会覆盖。
 
 ## 其他文件
 
-`*.list`、`*.yaml`、`*.lsr`、`anthropic_supple.json` 为既有的其他格式规则，未改动。
+`*.list`、`*.yaml` 为既有的其他格式规则，未改动。

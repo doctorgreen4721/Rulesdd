@@ -1,6 +1,8 @@
 # Anthropic 自有 IP 段（IP 兜底）
-# 来源：https://ip.net.coffee/claude/site.html “IP 段 / ASN 兜底规则”（2026-11-25 抓取）
-# Xray 不支持 ASN 匹配。RIPEstat 2026-11-25 查询 AS399358 宣告的前缀为
-# 160.79.104.0/23、2607:6bc0::/48、2607:6bc0:11::/48，均包含在下面两段之内。
+# 自动生成区：IP-CIDR / IP-CIDR6 取自页面；Xray 不支持 ASN，IP-ASN 按 RIPEstat
+# 当前宣告的前缀展开，只补入未被页面 CIDR 覆盖的部分。
+# BEGIN net.coffee（自动生成，勿手改）
 160.79.104.0/21
 2607:6bc0::/32
+# AS399358：RIPEstat 宣告 3 个前缀，3 个已被上方 CIDR 覆盖
+# END net.coffee
