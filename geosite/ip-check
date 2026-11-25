@@ -1,0 +1,11 @@
+# IP / 泄露检测网站：让检测结果与 Claude 出口一致
+# 来源：本仓库 anthropic_supple.json 中的“一些检测网站”
+domain:ipleak.net
+domain:browserleaks.com
+domain:scamalytics.com
+domain:ipkk.com
+domain:iplark.com
+domain:ip.net.coffee
+domain:ippure.com
+domain:fuck-claude.vercel.app
+domain:claude-tester-six.vercel.app

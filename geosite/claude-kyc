@@ -1,0 +1,6 @@
+# Claude 身份核验（KYC）相关域名，遇到 KYC 时再启用
+# 来源：https://ip.net.coffee/claude/site.html “KYC认证”表（2026-11-25 抓取）
+# 注意：maps.googleapis.com 是 Google 通用服务，启用后所有应用的地图请求都会走同一出口
+full:maps.googleapis.com
+domain:withpersona.com
+domain:frompersona.com
