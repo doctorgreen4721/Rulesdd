@@ -17,6 +17,7 @@ import ipaddress
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -62,12 +63,34 @@ def extract_rules(page: str) -> list[str]:
 
 
 def announced_prefixes(asn: str) -> list[ipaddress._BaseNetwork] | None:
-    try:
-        data = json.loads(fetch(f"https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS{asn}"))
-        return [ipaddress.ip_network(item["prefix"]) for item in data["data"]["prefixes"]]
-    except Exception as exc:  # RIPEstat 不可用时不阻塞更新，保留现有 CIDR
-        print(f"警告：查询 AS{asn} 失败，跳过 ASN 展开：{exc}", file=sys.stderr)
-        return None
+    url = f"https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS{asn}"
+    for attempt in range(1, 4):
+        try:
+            data = json.loads(fetch(url))
+            return [ipaddress.ip_network(item["prefix"]) for item in data["data"]["prefixes"]]
+        except Exception as exc:  # RIPEstat 不可用时不阻塞更新
+            print(f"警告：查询 AS{asn} 第 {attempt} 次失败：{exc}", file=sys.stderr)
+            time.sleep(5 * attempt)
+    return None
+
+
+def previous_asn_blocks(path: Path) -> dict[str, list[str]]:
+    """读出自动生成区里上次成功的 ASN 展开结果（注释行及其后的前缀行）。"""
+    text = path.read_text(encoding="utf-8")
+    start, end = text.find(BEGIN), text.find(END)
+    blocks: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text[start + len(BEGIN):end].splitlines():
+        line = line.strip()
+        match = re.match(r"^# AS(\d+)：RIPEstat 宣告", line)
+        if match:
+            current = match.group(1)
+            blocks[current] = [line]
+        elif line.startswith("#"):
+            current = None
+        elif line and current:
+            blocks[current].append(line)
+    return blocks
 
 
 def replace_region(path: Path, body: list[str]) -> None:
@@ -93,7 +116,7 @@ def site_lines(lines: list[str]) -> list[str]:
     return out
 
 
-def ip_lines(lines: list[str]) -> list[str]:
+def ip_lines(lines: list[str], previous: dict[str, list[str]]) -> list[str]:
     networks, asns = [], []
     for line in lines:
         match = RULE.match(line)
@@ -108,7 +131,8 @@ def ip_lines(lines: list[str]) -> list[str]:
     for asn in asns:
         prefixes = announced_prefixes(asn)
         if prefixes is None:
-            out.append(f"# AS{asn}：RIPEstat 暂不可用，仅依赖上方 CIDR")
+            # 查询失败时沿用上次成功的展开，避免网络波动造成无意义的变更或丢失前缀。
+            out.extend(previous.get(asn) or [f"# AS{asn}：RIPEstat 暂不可用，仅依赖上方 CIDR"])
             continue
         extra = [p for p in prefixes if not any(p.version == n.version and p.subnet_of(n) for n in networks)]
         covered = len(prefixes) - len(extra)
@@ -141,7 +165,8 @@ def main() -> int:
     try:
         page = Path(args.html).read_text(encoding="utf-8") if args.html else fetch(SOURCE_URL)
         lines = extract_rules(page)
-        site, ips, lsr = site_lines(lines), ip_lines(lines), lsr_text(lines)
+        previous = previous_asn_blocks(ROOT / "geoip" / "claude")
+        site, ips, lsr = site_lines(lines), ip_lines(lines, previous), lsr_text(lines)
     except Exception as exc:
         print(f"更新失败：{exc}", file=sys.stderr)
         return 1
